@@ -94,7 +94,7 @@ public class Controller extends HttpServlet {
 		String token="";
 		try {
 			ChannelService cs = ChannelServiceFactory.getChannelService();
-			token = cs.createChannel("answerphrase");
+			token = cs.createChannel("answerphraseUpdate");
 			AppCacheManager.set("answerphraseBroadCast", token);
 			System.out.println("token:" + token);
 		} catch (Exception e) {
