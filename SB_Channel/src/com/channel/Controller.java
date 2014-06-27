@@ -169,7 +169,7 @@ public class Controller extends HttpServlet {
 		String data = req.getParameter("data");
 		String operation = req.getParameter("op");
 
-		if (operation != null && !operation.equals("")) {
+		if ( StringUtils.isNotEmpty(operation) ) {
 			TreeMap<String, Object> hm = null;
 			String userChannelKey = (String) AppCacheManager
 					.get("answerphraseBroadCast");
@@ -177,10 +177,11 @@ public class Controller extends HttpServlet {
 			switch (operation) {
 
 			case "update":
-				if (data != null) {
+				if ( StringUtils.isNotEmpty(data) ) {
+					data = data.trim();
 					hm = new TreeMap<String, Object>();
-					hm.put("accountnumber", data.split("\\|\\|")[0]);
-					hm.put("answerphrase", data.split("\\|\\|")[1]);
+					hm.put("accountnumber", data.split("[|]")[0]);
+					hm.put("answerphrase", data.split("[|]")[1]);
 
 					sendUpdateToUser(userChannelKey,
 							createChannelObject(hm, "answerphrase"));

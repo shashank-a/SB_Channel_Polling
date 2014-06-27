@@ -3,7 +3,7 @@
 <html><head>
 <!-- <script type="text/javascript" src="/js/channel.js"></script> -->
 <script type="text/javascript" src="/_ah/channel/jsapi"></script>
-<script type="text/javascript" src="http://images.sb.a-cti.com/testing/shashank/js/channelListner.js"></script>
+<script type="text/javascript" src="http://images.sb.a-cti.com/testing/shashank/js/channelAction.js"></script>
 <!-- <script type="text/javascript" src="/js/channelListner.js"></script> -->
 <script>
 var _gaq = _gaq || [];

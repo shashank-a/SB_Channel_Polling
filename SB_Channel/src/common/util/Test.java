@@ -11,6 +11,10 @@ public class Test
 	{
 		public static void main( String[] args ) throws ParseException
 			{
+			
+				String data = "	8777123123|hello world";
+				System.out.println("1:: "+data.split("[|]")[0]);
+				System.out.println("2:: "+data.split("[|]")[1]);
 //				SimpleDateFormat outputFormat = new SimpleDateFormat( "MM/dd/yyyy hh:mm aa zzz" );
 //				outputFormat.setTimeZone( TimeZone.getTimeZone( "Antarctica/Casey" ) );
 //				System.out.println(outputFormat.format( new Date() ));
