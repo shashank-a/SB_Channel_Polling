@@ -1,3 +1,10 @@
+/*
+ * ChannelManager.js
+ * CDN URL
+ * Live : gsutil -h "Cache-Control:no-cache" cp -z js -a public-read file:///Users/kamesh/git/SB_Channel_Polling/SB_Channel/war/js/channelManager.js gs://images.sb.a-cti.com/sb-channel/live/js/
+ * Staging : gsutil -h "Cache-Control:no-cache" cp -z js -a public-read file:///Users/kamesh/git/SB_Channel_Polling/SB_Channel/war/js/channelManager.js gs://images.sb.a-cti.com/sb-channel/staging/js/
+ */
+
 var win_handles = {};
 console.log("Manager.js June 27 16:26")
 function sendXHR(parms) {

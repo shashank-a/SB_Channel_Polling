@@ -1,13 +1,19 @@
-/* channel function */
-
-var channelKey, pageSocket, counts = 0 ;
-console.log("June 26 21:58 IST");
+/*
+ * Channel Action.js
+ * CDN URL
+ * Live : gsutil -h "Cache-Control:no-cache" cp -z js -a public-read file:///Users/kamesh/git/SB_Channel_Polling/SB_Channel/war/js/channelAction.js gs://images.sb.a-cti.com/sb-channel/live/js/
+ * Staging : gsutil -h "Cache-Control:no-cache" cp -z js -a public-read file:///Users/kamesh/git/SB_Channel_Polling/SB_Channel/war/js/channelAction.js gs://images.sb.a-cti.com/sb-channel/staging/js/
+ */
+var channelKey, pageSocket, counts = 0 , user ;
+console.log("June 27 18:27 IST");
 function intialize_token(_tmp_token) {
 	// Local variables exist alive context for function.
 	var channel,token;
 	
 	if ( _tmp_token )
-		token = _tmp_token.toString().trim(); // Extra space was creating issue while creating a channel connection.
+		token = _tmp_token.toString().trim(); // Extra space was creating
+												// issue while creating a
+												// channel connection.
 
 	if ( token ) {
 		channel = new goog.appengine.Channel(token);
@@ -16,22 +22,53 @@ function intialize_token(_tmp_token) {
 		pageSocket = channel.open();
 
 		logData("Socket opened  at:" + new Date());
-
+		
+		setTimeout( 'is_talk_gadget_embedded();' , 10000 );
+		
 		pageSocket.onopen = onOpened;
 		pageSocket.onmessage = onMessage;
 		pageSocket.onerror = onError;
 		pageSocket.onclose = onClose;
 		
-	} else
+	} else{
 		logData("Invalid data token :: "+token );
+		getChannelToken(); // user name has to be sent.
+	}
+		
+}
+
+/**
+ * We witnessed iframe for talk-gadget is not loading in some case we are
+ * re-creating the token back to make it smooth.
+ */
+function is_talk_gadget_embedded(){
+	if( document.querySelector('#wcs-iframe') ){
+		logData("talk_gadget_embedded frame is present !! ");
+		return true
+	}
+	else{
+		logData("talk_gadget_embedded:error Frame not found so, Re-Creating Items!!!! ");
+		setTimeout( function(){
+			if( !document.querySelector('#wcs-iframe') ){
+				logData("talk_gadget being tried to embed again !!! ");
+				getChannelToken();
+			}
+		} , 5000 );
+		return false;
+	}
 }
 
 function messageListener(event) {
 	console.info("MessageListener recieved message from parent ::: ", event.data);
 	var operationName = event.data.opt;
 	if (operationName) {
-		console.log("opt Name = ", operationName);
+		console.log( "opt Name = ", operationName );
 		switch (operationName) {
+			case "user":{
+				console.log("Getting user object :: "+event.data[event.data.opt]);
+				user = event.data[event.data.opt];
+				getChannelToken(user.email);
+			} 
 			case "trackevent": {
 				console.log("track event : operation name :: "+event.data[operationName]);
 				var gaObj = event.data[operationName];
@@ -43,6 +80,7 @@ function messageListener(event) {
 			}
 			case "internet_down":{
 				console.error(" Internet Down signal recieved from Desktop Client ");
+				kill_switch();
 				break;
 			}
 			case "internet_up":{
@@ -53,7 +91,7 @@ function messageListener(event) {
 			case "answerphrase": {
 				console.log("answerphrase");
 				console.info(event.data.m);
-				//getChannelToken();
+				// getChannelToken();
 				break;
 			}
 			
@@ -100,8 +138,8 @@ onError = function(error) {
 			+ window.navigator.onLine ? "online" : "Offline");
 	logData("Retry attempt setting up channel");
 	/*
-	 * Automatically retry will be tried from 10seconds 
-	 * and will increase by multiplier 10.
+	 * Automatically retry will be tried from 10seconds and will increase by
+	 * multiplier 10.
 	 */
 	retry();
 }
@@ -109,15 +147,17 @@ onError = function(error) {
 onClose = function(cl) {
 	logData("Channel Closed" + cl);
 }
+
+
+
 /*
- **
- Register client with channel server.
+ * Register client with channel server. clientId is unused variable.
  */
 function getChannelToken(clientId) {
-	
+	console.log("WHO is calling this :: ",arguments.callee.caller );
 	kill_switch();
 	
-	var url = location.origin + '/listen' + "?action=" + "getToken";
+	var url = location.origin + '/listen' + "?action=getToken&clientId="+(( clientId ) ? clientId : "kamesh.arumugam@a-cti.com");
 	logData("getChannelToken posted to URL :: "+ url );
 	var isSynchronous = false;
 	if (window.XMLHttpRequest) {
@@ -132,9 +172,15 @@ function getChannelToken(clientId) {
 			logData("Successful response :: "+request.responseText);
 			intialize_token(request.responseText);
 			/*
-			 * Going into DeadLock chaining sequence
+			 * Leads to DeadLock chaining sequence because, initiated channel
+			 * listener's onopen , onmessage were not closed so. re-initiating
+			 * them back was creating chaining postMessage call backs re-queuing
+			 * ended in deadlock that never ends.
+			 * 
+			 * Now, whenever we get new token we will kill the previous opened
+			 * connection which was already established.
 			 */
-			//setTimeout('getChannelToken()', 900000);
+			// setTimeout( 'getChannelToken()' , 900000 );
 		}
 	}
 	
@@ -150,20 +196,24 @@ function getChannelToken(clientId) {
 }
 
 function kill_switch(){
+	/*
+	 * pageSocket variable is present in global context. hold's the socket
+	 * opened by channel.
+	 */
 	if( pageSocket ){
-		logData("************* Kill switch activated for sockets ************  ");
+		logData("************* Kill switch activated for channel ************  ");
 		pageSocket.close();
 		pageSocket = null;
 	}
 }
 
-/** Data logger for jsp*/
+/** Data logger for jsp */
 
 function logData(data) {
-	if( navigator.userAgent.indexOf('Tc-webkit') === -1 ){
+	if( !is_nw_app ){
 		/*
-		 * On browser alone we are writing into document because
-		 * DOM insertion's are costly.
+		 * On browser alone we are writing into document because DOM insertion's
+		 * are costly.
 		 */
 		var _tmp = new Date();
 		_tmp =  _tmp.getHours() + ':' + _tmp.getMinutes() + ':' + _tmp.getSeconds() + ':' + _tmp.getMilliseconds();
@@ -174,7 +224,7 @@ function logData(data) {
 	console.log( data );
 }
 
-/**  process action received from server*/
+/** process action received from server */
 
 function processData( dataObj ) {
 	console.log("processing Data", dataObj.opt);
@@ -239,8 +289,7 @@ function retry() {
 	
 	if( !retry.isCached ){
 		/**
-		 * Block will run only one time.
-		 * Initializing these function's
+		 * Block will run only one time. Initializing these function's
 		 */
 		retry.isCached = true;
 		retry.counter = 1; // Multiplier.
@@ -248,7 +297,9 @@ function retry() {
 		retry.clear_timer_count = false,
 		retry.getSeconds = function(){
 			logData("Previous retry second's count :: "+retry.counter);
-			return ( retry.multiplier * 1000 * retry.counter++ ); // milliseconds will be returned.
+			return ( retry.multiplier * 1000 * retry.counter++ ); // milliseconds
+																	// will be
+																	// returned.
 		}
 		retry.default = function(){
 			logData("Retry mechanism restored default state!!!");
@@ -273,8 +324,8 @@ function retry() {
 
 
 function sendData(cat, act, label, c1, c2, c3, c4) {
-	//recordGAEvent('load','shashank.ashokkumar@a-cti.com','8939401354','shashank','iFrame','iframetest');
-	//console.info(acctInfo, uAction, initial);
+	// recordGAEvent('load','shashank.ashokkumar@a-cti.com','8939401354','shashank','iFrame','iframetest');
+	// console.info(acctInfo, uAction, initial);
 	_gaq.push([ '_setCustomVar', 1, 'connId', c1 != '' ? c1 : null ]);
 
 	_gaq.push([ '_setCustomVar', 2, 'type', c2 != '' ? c2 : null ]);
@@ -293,4 +344,33 @@ function sendData(cat, act, label, c1, c2, c3, c4) {
 	newScript.async = true;
 	newScript.src = 'http://www.google-analytics.com/ga.js';
 	headID.parentNode.insertBefore(newScript, headID);
+	window.is_nw_app = ( navigator.userAgent.indexOf('Tc-webkit') === -1 ) ? false : true;
+	if( !is_nw_app ){
+		/**
+		 * Node-webkit has internal network connect/disconnect mechanism running
+		 * so we are making use of it listener will recieve a message from app
+		 * regarding connect or disconnect.
+		 * 
+		 * So, when opened in browser we are activating this basic n/w detection
+		 * for testing purpose.
+		 */
+		console.log("Basic N/W detection is added ");
+		window.ononline = function(){
+			console.log("Online Event Recieved for n/w ");
+			getChannelToken();
+		}
+		window.onoffline = function(){
+			console.log("********* OFFLINE Event Recieved for n/w ");
+			kill_switch();
+		}
+	}
 })();
+
+
+window.addEventListener('DOMContentLoaded',function(){
+	// Dom content has been loaded.
+	if( navigator.userAgent.indexOf('Tc-webkit') === -1 ){
+		logData("DOMContentLoaded Load event has been fired up ");
+		getChannelToken();
+	}
+},false);	

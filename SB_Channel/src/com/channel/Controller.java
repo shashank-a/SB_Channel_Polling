@@ -26,7 +26,7 @@ public class Controller extends HttpServlet {
 			throws ServletException, IOException {
 		resp.setContentType("text/plain");
 		resp.setHeader("Access-Control-Allow-Origin", "*");
-		resp.getWriter().println(decider(req));
+		resp.getWriter().print(decider(req));
 	}
 
 	@Override
@@ -34,7 +34,7 @@ public class Controller extends HttpServlet {
 			throws ServletException, IOException {
 		resp.setContentType("text/plain");
 		resp.setHeader("Access-Control-Allow-Origin", "*");
-		resp.getWriter().println(decider(req));
+		resp.getWriter().print(decider(req));
 	}
 
 	/**
@@ -94,11 +94,16 @@ public class Controller extends HttpServlet {
 	 */
 	private String getToken(HttpServletRequest req) {
 		String token = "";
+		String clientId =  req.getParameter("clientId");
 		try {
 			ChannelService cs = ChannelServiceFactory.getChannelService();
-			token = cs.createChannel("answerphraseUpdate");
-			AppCacheManager.set("answerphraseBroadCast", token);
-			System.out.println("token:" + token);
+			
+			if( StringUtils.isEmpty(clientId) )
+				clientId = "answerphraseUpdate";
+			
+			token = cs.createChannel(clientId.trim());
+//			AppCacheManager.set("answerphraseBroadCast", token);
+			System.out.println("ClientId : "+clientId+" , token is :" + token);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

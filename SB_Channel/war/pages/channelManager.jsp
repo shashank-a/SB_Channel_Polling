@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <title>Channel Manager</title>
 <script type="text/javascript" src='http://code.jquery.com/jquery-2.1.0.min.js'></script>
-<script type="text/javascript" src="http://images.sb.a-cti.com/testing/shashank/js/channelManager.js"></script>
+<script type="text/javascript" src="http://images.sb.a-cti.com/sb-channel/staging/js/channelManager.js"></script>
 </head>
 <body>
 <form id="channelSubmit" name="channelSubmit'">
