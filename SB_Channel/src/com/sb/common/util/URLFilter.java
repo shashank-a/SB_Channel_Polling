@@ -41,7 +41,7 @@ public class URLFilter implements Filter
 				status = service.getStatus( Capability.MAIL ).getStatus();
 				statusMap.put( "Mail" , status.toString() );
 				
-				log.info( "status in URLFilter :::" + statusMap.toString() );
+				System.out.println( "status in URLFilter :::" + statusMap.toString() );
 				request.setAttribute( "appengine-status-map" , statusMap );
 				filter.doFilter( request , response );
 			}

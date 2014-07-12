@@ -2,6 +2,7 @@ package com.channel;
 
 import java.io.IOException;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.TreeMap;
 
 import javax.servlet.ServletException;
@@ -11,13 +12,12 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.client.ClientJDO;
 import com.google.appengine.api.channel.ChannelMessage;
 import com.google.appengine.api.channel.ChannelService;
 import com.google.appengine.api.channel.ChannelServiceFactory;
 import com.google.appengine.labs.repackaged.org.json.JSONException;
 import com.google.appengine.labs.repackaged.org.json.JSONObject;
-
-import common.util.AppCacheManager;
 
 @SuppressWarnings("serial")
 public class Controller extends HttpServlet {
@@ -73,12 +73,18 @@ public class Controller extends HttpServlet {
 				case "push":
 					response = push(req);
 					break;
+				case "clearMemcache":
+					ClientMemCacheManager.clearCache();
+					break;
+				case "clearDatastore":
+					new ClientRecord().clearDatastore();
+					break;
 				default:
 					response = "Access Denied";
 					break;
 				}
 
-			return response;
+			return ( response == null ) ? "default response" : response ;
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -95,33 +101,46 @@ public class Controller extends HttpServlet {
 	private String getToken(HttpServletRequest req) {
 		String token = "";
 		String clientId =  req.getParameter("clientId");
+		ClientJDO lClientJDO = null;
+		ClientRecord lClientRecord = null;
 		try {
-			ChannelService cs = ChannelServiceFactory.getChannelService();
-			
-			if( StringUtils.isEmpty(clientId) )
-				clientId = "answerphraseUpdate";
-			
-			token = cs.createChannel(clientId.trim());
-//			AppCacheManager.set("answerphraseBroadCast", token);
-			System.out.println("ClientId : "+clientId+" , token is :" + token);
+			if( StringUtils.isNotEmpty(clientId) ){
+				lClientRecord =  new ClientRecord();
+				ChannelService cs = ChannelServiceFactory.getChannelService();
+				// Check if clientid and token not expired and create new one else reuse.
+				lClientJDO = lClientRecord.getClient(clientId); 
+				if(  lClientJDO != null )
+					token = lClientJDO.getToken();
+				else{
+					token = cs.createChannel(clientId, ( ClientRecord.time_diff / (1000 * 60) ) ); // 23 hours channel is will available for a client
+					lClientRecord.setClient(clientId, token);
+				}	
+				System.out.println("ClientId : "+clientId+" , token is :" + token);
+			}
+			else
+				System.out.println(" Issue with clientId ::: "+clientId);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return token;
 	}
+	
 
-	public void sendUpdateToUser(String userChannelKey, String data) {
+	public void sendUpdateToUser(String data) {
+		List<ClientJDO> _list = null;
 		synchronized (this) {
 			ChannelService channelService = ChannelServiceFactory
 					.getChannelService();
-			userChannelKey = (String) AppCacheManager
-					.get("answerphraseBroadCast");
-			System.out.println("userChannelKey:" + userChannelKey);
 			System.out.println("Synchronized thread,  printing something :::"
 					+ data);
-			channelService
-					.sendMessage(new ChannelMessage(userChannelKey, data));
-			System.out.println("message sent to client");
+			_list = new ClientRecordStoreManager().getClients();
+			if( _list != null) {
+				for (ClientJDO client : _list) {
+//					System.out.println("Sending message to :: "+client.getKey());
+					channelService.sendMessage(new ChannelMessage(client.getKey(), data));
+				}
+				System.out.println("Message sent to client :: "+_list.size() );
+			}
 		}
 	}
 
@@ -173,11 +192,11 @@ public class Controller extends HttpServlet {
 
 		String data = req.getParameter("data");
 		String operation = req.getParameter("op");
+		/* Induvijual user will identified here */
 
 		if ( StringUtils.isNotEmpty(operation) ) {
 			TreeMap<String, Object> hm = null;
-			String userChannelKey = (String) AppCacheManager
-					.get("answerphraseBroadCast");
+			new ClientRecordStoreManager().getClients();
 
 			switch (operation) {
 
@@ -187,10 +206,7 @@ public class Controller extends HttpServlet {
 					hm = new TreeMap<String, Object>();
 					hm.put("accountnumber", data.split("[|]")[0]);
 					hm.put("answerphrase", data.split("[|]")[1]);
-
-					sendUpdateToUser(userChannelKey,
-							createChannelObject(hm, "answerphrase"));
-					System.out.println("inside updateStatus" + userChannelKey);
+					sendUpdateToUser(createChannelObject(hm, "answerphrase"));
 				}
 				break;
 
@@ -201,9 +217,7 @@ public class Controller extends HttpServlet {
 					hm = new TreeMap<String, Object>();
 					hm.put("status", data);
 
-					sendUpdateToUser(userChannelKey,
-							createChannelObject(hm, "status"));
-					System.out.println("inside updateStatus" + userChannelKey);
+					sendUpdateToUser(createChannelObject(hm, "status"));
 				}
 				break;
 				
@@ -213,11 +227,8 @@ public class Controller extends HttpServlet {
 			default:
 				System.out.println("######No Match Found#####");
 				break;
-
 			}
-
 		}
-
 		return "push request is recieved";
 	}
 }
